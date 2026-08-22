@@ -1,6 +1,7 @@
 import streamlit as st
 import json
 import os
+import re
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -15,9 +16,9 @@ st.markdown("""
 <style>
     /* Global Container */
     .main .block-container {
-        padding-top: 2rem;
+        padding-top: 1.8rem;
         padding-bottom: 3rem;
-        max-width: 1100px;
+        max-width: 1050px;
     }
     
     /* Header Card */
@@ -57,26 +58,37 @@ st.markdown("""
         color: #38bdf8;
     }
     
-    /* Question Card Header */
+    /* Badge styling */
     .rq-badge {
         display: inline-block;
         background-color: #ec4899;
         color: white;
         font-size: 0.8rem;
         font-weight: 700;
-        padding: 3px 10px;
+        padding: 4px 10px;
         border-radius: 6px;
-        margin-bottom: 8px;
+        margin-bottom: 6px;
     }
     .data-pill {
         display: inline-block;
         background-color: #0284c7;
         color: white;
-        font-size: 0.75rem;
+        font-size: 0.78rem;
         font-weight: 600;
-        padding: 3px 10px;
+        padding: 4px 12px;
         border-radius: 12px;
         margin-left: 8px;
+    }
+    
+    /* Answer Box */
+    .answer-box {
+        background-color: #0f172a;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        padding: 20px 24px;
+        margin: 14px 0 20px 0;
+        color: #e2e8f0;
+        line-height: 1.6;
     }
     
     /* Verbatim Review Box */
@@ -85,11 +97,11 @@ st.markdown("""
         border-left: 4px solid #38bdf8;
         border-radius: 0 8px 8px 0;
         padding: 12px 16px;
-        margin-bottom: 10px;
+        margin-bottom: 12px;
     }
     .review-text {
         font-size: 0.92rem;
-        color: #f1f5f9;
+        color: #f8fafc;
         font-style: italic;
         line-height: 1.5;
     }
@@ -100,7 +112,7 @@ st.markdown("""
     }
     .source-tag {
         display: inline-block;
-        padding: 2px 6px;
+        padding: 2px 8px;
         border-radius: 4px;
         font-size: 0.72rem;
         font-weight: 600;
@@ -111,32 +123,44 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- Load Data & Insights ---
-@st.cache_data
-def load_rq_insights():
+def sanitize_answer(text):
+    if not text:
+        return ""
+    # Strip any think tags or prompt instructions if ever present
+    text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
+    text = re.sub(r'think>.*?(###|\Z)', r'\1', text, flags=re.DOTALL)
+    text = re.sub(r'Thinking Process:.*?(###|\Z)', r'\1', text, flags=re.DOTALL)
+    text = re.sub(r'Deconstruct the Request:.*?(###|\Z)', r'\1', text, flags=re.DOTALL)
+    text = re.sub(r'Role:.*?Output Structure:.*?(###|\Z)', r'\1', text, flags=re.DOTALL)
+    return text.strip()
+
+# --- Load Data Directly ---
+def load_data():
     path = "backend/rq_insights.json"
     if os.path.exists(path):
         with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
+            # Ensure every item is clean
+            for k, v in data.items():
+                v["ai_answer"] = sanitize_answer(v.get("ai_answer", ""))
+            return data
     return {}
 
-@st.cache_data
-def get_total_reviews_count():
-    if os.path.exists("collected_data.json"):
+insights_data = load_data()
+total_reviews = 2226
+if os.path.exists("collected_data.json"):
+    try:
         with open("collected_data.json", "r", encoding="utf-8") as f:
-            data = json.load(f)
-            return len(data)
-    return 2226
-
-insights_data = load_rq_insights()
-total_reviews = get_total_reviews_count()
+            total_reviews = len(json.load(f))
+    except Exception:
+        pass
 
 # --- Header ---
 st.markdown(f"""
 <div class="hero-header">
     <div class="hero-title">🛍️ Myntra Wishlist Conversion Discovery Engine</div>
     <div class="hero-subtitle">
-        AI-synthesized strategic findings for all 10 core research questions generated directly from real customer reviews across Play Store, App Store, Twitter/X, YouTube, and Reddit.
+        Customer discovery findings and answers for all 10 core research questions determined directly from real customer reviews across Play Store, App Store, Twitter/X, YouTube, and Reddit.
     </div>
     <div class="stats-bar">
         <span class="stat-pill">📊 Total Customer Reviews: {total_reviews:,}</span>
@@ -147,20 +171,17 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # --- View Mode Selector ---
-col_view, col_filter = st.columns([2, 1])
-with col_view:
-    view_mode = st.radio(
-        "Display Mode:",
-        ["Expandable Accordion View (All 10 Questions)", "Interactive Single Question Selector"],
-        horizontal=True
-    )
+view_mode = st.radio(
+    "Display Mode:",
+    ["Expandable Accordion View (All 10 Questions)", "Interactive Single Question Selector"],
+    horizontal=True
+)
 
 st.write("")
 
 # --- Render Questions & Answers ---
 if view_mode == "Interactive Single Question Selector":
-    # Dropdown selector
-    options = [f"RQ {k}: {v['title']} ({v['data_count']} reviews)" for k, v in insights_data.items()]
+    options = [f"RQ {k}: {v['title']}" for k, v in sorted(insights_data.items(), key=lambda x: int(x[0]))]
     selected_option = st.selectbox("Select a Research Question to inspect:", options, index=0)
     selected_key = selected_option.split(":")[0].replace("RQ", "").strip()
     
@@ -170,12 +191,11 @@ if view_mode == "Interactive Single Question Selector":
         st.markdown(f"<span class='rq-badge'>RESEARCH QUESTION {q_data['number']}</span> <span class='data-pill'>📊 Backed by {q_data['data_count']} customer reviews ({q_data['data_ratio']}%)</span>", unsafe_allow_html=True)
         st.markdown(f"## **{q_data['title']}**")
         
-        # AI Generated Answer
-        st.markdown("### 💡 AI Answer (Generated from Customer Reviews)")
-        st.markdown(q_data.get("ai_answer", ""))
+        # 1. Answer First
+        st.markdown("### 💡 Answer (Determined from Customer Reviews)")
+        st.markdown(f"<div class='answer-box'>{q_data.get('ai_answer', '')}</div>", unsafe_allow_html=True)
         
-        # Backing Customer Reviews
-        st.markdown("---")
+        # 2. Backing Reviews Second
         reviews = q_data.get("backing_reviews", [])
         st.markdown(f"### 💬 Customer Reviews Backing This Answer ({len(reviews)} shown)")
         
@@ -205,14 +225,13 @@ else:
         with st.expander(expander_title, expanded=(q_data['number'] == 1)):
             st.markdown(f"<span class='rq-badge'>QUESTION {q_data['number']}</span> <span class='data-pill'>📊 Backed by {q_data['data_count']} customer reviews ({q_data['data_ratio']}% of total dataset)</span>", unsafe_allow_html=True)
             
-            # Answer Section
-            st.markdown("#### 💡 AI Answer (Generated from Customer Reviews)")
-            st.markdown(q_data.get("ai_answer", ""))
+            # 1. Answer First
+            st.markdown("#### 💡 Answer (Determined from Customer Reviews)")
+            st.markdown(f"<div class='answer-box'>{q_data.get('ai_answer', '')}</div>", unsafe_allow_html=True)
             
-            # Backing Customer Reviews Section
+            # 2. Backing Reviews Second
             reviews = q_data.get("backing_reviews", [])
-            st.markdown("---")
-            st.markdown(f"#### 💬 Verbatim Customer Reviews Backing This Finding ({len(reviews)} reviews):")
+            st.markdown(f"#### 💬 Customer Reviews Backing This Answer ({len(reviews)} reviews):")
             
             for r in reviews:
                 source = r.get("source", "Review")

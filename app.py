@@ -114,8 +114,6 @@ sources = summary.get("sources", {})
 for s, count in sources.items():
     st.sidebar.write(f"• **{s}**: {count:,} records")
 
-st.sidebar.markdown("---")
-st.sidebar.info("💡 **Constraint**: Strategic focus on increasing 30-day wishlist-to-purchase conversion via **non-monetary** product interventions.")
 
 # --- Main App Header ---
 st.title("🛍️ Myntra AI-Powered Discovery Engine")

@@ -106,13 +106,6 @@ selected_model = st.sidebar.selectbox(
 )
 groq_engine.model = selected_model
 
-# Dataset Stats in Sidebar
-st.sidebar.markdown("---")
-st.sidebar.subheader("Dataset Composition")
-st.sidebar.metric("Total User Feedback", f"{summary.get('total_reviews', 0):,}")
-sources = summary.get("sources", {})
-for s, count in sources.items():
-    st.sidebar.write(f"• **{s}**: {count:,} records")
 
 
 # --- Main App Header ---

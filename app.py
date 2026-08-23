@@ -170,34 +170,21 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# --- View Mode Selector ---
-view_mode = st.radio(
-    "Display Mode:",
-    ["Expandable Accordion View (All 10 Questions)", "Interactive Single Question Selector"],
-    horizontal=True
-)
-
-st.write("")
-
 # --- Render Questions & Answers ---
-if view_mode == "Interactive Single Question Selector":
-    options = [f"RQ {k}: {v['title']}" for k, v in sorted(insights_data.items(), key=lambda x: int(x[0]))]
-    selected_option = st.selectbox("Select a Research Question to inspect:", options, index=0)
-    selected_key = selected_option.split(":")[0].replace("RQ", "").strip()
+for q_key in sorted(insights_data.keys(), key=lambda x: int(x)):
+    q_data = insights_data[q_key]
     
-    q_data = insights_data.get(selected_key, {})
-    if q_data:
-        st.markdown("---")
-        st.markdown(f"<span class='rq-badge'>RESEARCH QUESTION {q_data['number']}</span> <span class='data-pill'>📊 Backed by {q_data['data_count']} customer reviews ({q_data['data_ratio']}%)</span>", unsafe_allow_html=True)
-        st.markdown(f"## **{q_data['title']}**")
+    expander_title = f"RQ {q_data['number']}: {q_data['title']}  —  [{q_data['data_count']} backing reviews]"
+    with st.expander(expander_title, expanded=(q_data['number'] == 1)):
+        st.markdown(f"<span class='rq-badge'>QUESTION {q_data['number']}</span> <span class='data-pill'>📊 Backed by {q_data['data_count']} customer reviews ({q_data['data_ratio']}% of total dataset)</span>", unsafe_allow_html=True)
         
         # 1. Answer First
-        st.markdown("### 💡 Answer (Determined from Customer Reviews)")
+        st.markdown("#### 💡 Answer (Determined from Customer Reviews)")
         st.markdown(f"<div class='answer-box'>{q_data.get('ai_answer', '')}</div>", unsafe_allow_html=True)
         
         # 2. Backing Reviews Second
         reviews = q_data.get("backing_reviews", [])
-        st.markdown(f"### 💬 Customer Reviews Backing This Answer ({len(reviews)} shown)")
+        st.markdown(f"#### 💬 Customer Reviews Backing This Answer ({len(reviews)} reviews):")
         
         for r in reviews:
             source = r.get("source", "Review")
@@ -215,40 +202,6 @@ if view_mode == "Interactive Single Question Selector":
                 </div>
             </div>
             """, unsafe_allow_html=True)
-
-else:
-    # Accordion View for All 10 Questions
-    for q_key in sorted(insights_data.keys(), key=lambda x: int(x)):
-        q_data = insights_data[q_key]
-        
-        expander_title = f"RQ {q_data['number']}: {q_data['title']}  —  [{q_data['data_count']} backing reviews]"
-        with st.expander(expander_title, expanded=(q_data['number'] == 1)):
-            st.markdown(f"<span class='rq-badge'>QUESTION {q_data['number']}</span> <span class='data-pill'>📊 Backed by {q_data['data_count']} customer reviews ({q_data['data_ratio']}% of total dataset)</span>", unsafe_allow_html=True)
-            
-            # 1. Answer First
-            st.markdown("#### 💡 Answer (Determined from Customer Reviews)")
-            st.markdown(f"<div class='answer-box'>{q_data.get('ai_answer', '')}</div>", unsafe_allow_html=True)
-            
-            # 2. Backing Reviews Second
-            reviews = q_data.get("backing_reviews", [])
-            st.markdown(f"#### 💬 Customer Reviews Backing This Answer ({len(reviews)} reviews):")
-            
-            for r in reviews:
-                source = r.get("source", "Review")
-                platform = r.get("platform", source)
-                date = r.get("date", "N/A")
-                segment = r.get("segment", "unidentified")
-                
-                st.markdown(f"""
-                <div class="review-box">
-                    <div class="review-text">"{r.get('raw_text')}"</div>
-                    <div class="review-meta">
-                        <span class="source-tag">{platform}</span>
-                        <span>📅 {date}</span> | 
-                        <span>👤 Segment: {segment}</span>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
 
 st.markdown("---")
 st.caption("Myntra Growth PM Discovery Engine • 10 Research Questions Analysis based on 2,226 Multi-Platform Customer Reviews")

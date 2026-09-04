@@ -136,7 +136,8 @@ def sanitize_answer(text):
 
 # --- Load Data Directly ---
 def load_data():
-    path = "backend/rq_insights.json"
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(base_dir, "backend", "rq_insights.json")
     if os.path.exists(path):
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -148,9 +149,11 @@ def load_data():
 
 insights_data = load_data()
 total_reviews = 2226
-if os.path.exists("collected_data.json"):
+base_dir = os.path.dirname(os.path.abspath(__file__))
+collected_path = os.path.join(base_dir, "collected_data.json")
+if os.path.exists(collected_path):
     try:
-        with open("collected_data.json", "r", encoding="utf-8") as f:
+        with open(collected_path, "r", encoding="utf-8") as f:
             total_reviews = len(json.load(f))
     except Exception:
         pass

@@ -14,6 +14,12 @@ st.set_page_config(
 # --- Custom Styling ---
 st.markdown("""
 <style>
+    /* Force Sleek Black Background */
+    .stApp, header[data-testid="stHeader"] {
+        background-color: #000000 !important;
+        color: #f8fafc;
+    }
+    
     /* Global Container */
     .main .block-container {
         padding-top: 1.8rem;
